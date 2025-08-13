@@ -6,15 +6,18 @@ type Fluid struct {
 	iters     int
 }
 
-func NewFluid(w, h int, k float64, iters int) *Fluid {
-	d := make([][]float64, w)
-	vx := make([][]float64, w)
-	vy := make([][]float64, w)
-	for i := range w {
-		d[i] = make([]float64, h)
-		vx[i] = make([]float64, h)
-		vy[i] = make([]float64, h)
+func newSlice2D(w, h int) [][]float64 {
+	s := make([][]float64, w)
+	for i := range s {
+		s[i] = make([]float64, h)
 	}
+	return s
+}
+
+func NewFluid(w, h int, k float64, iters int) *Fluid {
+	d := newSlice2D(w, h)
+	vx := newSlice2D(w, h)
+	vy := newSlice2D(w, h)
 	return &Fluid{d: d, vx: vx, vy: vy, k: k, iters: iters}
 }
 
@@ -35,10 +38,7 @@ func (f *Fluid) Set(x, y int, d, vx, vy float64) {
 }
 
 func diffuse(x [][]float64, k float64, iters int) [][]float64 {
-	xn := make([][]float64, len(x))
-	for i := range xn {
-		xn[i] = make([]float64, len(x[0]))
-	}
+	xn := newSlice2D(len(x), len(x[0]))
 	for range iters {
 		for c := range xn {
 			for r := range xn[c] {
@@ -70,10 +70,7 @@ func (f *Fluid) advect() [][]float64 {
 	d := func(x, y int) float64 {
 		return f.D(x, y)
 	}
-	dn := make([][]float64, len(f.d))
-	for i := range dn {
-		dn[i] = make([]float64, len(f.d[0]))
-	}
+	dn := newSlice2D(len(f.d), len(f.d[0]))
 	for x := range f.d {
 		for y := range f.d[x] {
 			fx, fy := float64(x)-f.vx[x][y], float64(y)-f.vy[x][y]
@@ -87,9 +84,33 @@ func (f *Fluid) advect() [][]float64 {
 	return dn
 }
 
+func (f *Fluid) clearDivergence() {
+	dv := newSlice2D(len(f.d), len(f.d[0]))
+	for x := 1; x < len(f.d)-1; x++ {
+		for y := 1; y < len(f.d[0])-1; y++ {
+			dv[x][y] = (f.vx[x+1][y] - f.vx[x-1][y] + f.vy[x][y+1] - f.vy[x][y-1]) / 2.0
+		}
+	}
+	p := newSlice2D(len(f.d), len(f.d[0]))
+	for range f.iters {
+		for x := 1; x < len(f.d)-1; x++ {
+			for y := 1; y < len(f.d[0])-1; y++ {
+				p[x][y] = (p[x-1][y] + p[x+1][y] + p[x][y-1] + p[x][y+1] - dv[x][y]) / 4.0
+			}
+		}
+	}
+	for x := 1; x < len(f.d)-1; x++ {
+		for y := 1; y < len(f.d[0])-1; y++ {
+			f.vx[x][y] -= (p[x+1][y] - p[x-1][y]) / 2.0
+			f.vy[x][y] -= (p[x][y+1] - p[x][y-1]) / 2.0
+		}
+	}
+}
+
 func (f *Fluid) Update() {
 	f.d = diffuse(f.d, f.k, f.iters)
 	f.vx = diffuse(f.vx, f.k, f.iters)
 	f.vy = diffuse(f.vy, f.k, f.iters)
 	f.d = f.advect()
+	f.clearDivergence()
 }
