@@ -31,19 +31,20 @@ func pollEvents(s tcell.Screen, f *fluid.Fluid) {
 			}
 		case *tcell.EventMouse:
 			x, y := ev.Position()
-			switch ev.Buttons() {
-			case tcell.Button1, tcell.Button2:
-				dx, dy := float64(x-prevMouseX), float64(y-prevMouseY)
-				dist := math.Hypot(dx, dy)
-				if dist < 1 {
-					continue
-				}
-				dx, dy = dx/dist, dy/dist
-				for i := range int(dist) {
-					xx := int(float64(prevMouseX) + dx*float64(i))
-					yy := int(float64(prevMouseY) + dy*float64(i))
-					f.Set(xx, yy*2, 7.0, dx*2.0, dy*2.0)
-				}
+			if prevMouseX == 0 && prevMouseY == 0 {
+				prevMouseX, prevMouseY = x, y
+				continue
+			}
+			dx, dy := float64(x-prevMouseX), float64(y-prevMouseY)
+			dist := math.Hypot(dx, dy)
+			if dist < 1 {
+				continue
+			}
+			dx, dy = dx/dist, dy/dist
+			for i := range int(dist) {
+				xx := int(float64(prevMouseX) + dx*float64(i))
+				yy := int(float64(prevMouseY) + dy*float64(i))
+				f.Set(xx, yy*2, 11.0, dx*8.0, dy*8.0)
 			}
 			prevMouseX, prevMouseY = x, y
 		}
@@ -57,8 +58,8 @@ func drawScreen(s tcell.Screen, f *fluid.Fluid) {
 			y1, y2 := y*2, y*2+1
 			b1, b2 := int32(math.Min(f.D(x, y1), 1)*255), int32(math.Min(f.D(x, y2), 1)*255)
 			st := tcell.StyleDefault
-			st = st.Background(tcell.NewRGBColor(b1, b1, b1))
-			st = st.Foreground(tcell.NewRGBColor(b2, b2, b2))
+			st = st.Background(tcell.NewRGBColor(b1, 255-b1, 255-b1))
+			st = st.Foreground(tcell.NewRGBColor(b2, 255-b2, 255-b2))
 			s.SetContent(x, y, '▄', nil, st)
 		}
 	}
@@ -95,7 +96,7 @@ func main() {
 	s.Clear()
 
 	w, h := s.Size()
-	f := fluid.NewFluid(w, h*2, 0.2, 10)
+	f := fluid.NewFluid(w, h*2, 0.15, 10)
 
 	quit = make(chan struct{})
 	go pollEvents(s, f)

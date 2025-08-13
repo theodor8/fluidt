@@ -18,6 +18,8 @@ func NewFluid(w, h int, k float64, iters int) *Fluid {
 	d := newSlice2D(w, h)
 	vx := newSlice2D(w, h)
 	vy := newSlice2D(w, h)
+	// TODO: change fluid size after creation
+	// TODO: reset fluid
 	return &Fluid{d: d, vx: vx, vy: vy, k: k, iters: iters}
 }
 
