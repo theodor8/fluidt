@@ -63,34 +63,33 @@ func diffuse(x [][]float64, k float64, iters int) [][]float64 {
 	return xn
 }
 
-// func (f *Fluid) advect() {
-// 	lerp := func(a, b, k float64) float64 {
-// 		return a + k*(b-a)
-// 	}
-// 	d := func(x, y int) float64 {
-// 		return f.D(x, y)
-// 	}
-// 	dn := make([][]float64, len(f.cells))
-// 	for i := range dn {
-// 		dn[i] = make([]float64, len(f.cells[0]))
-// 	}
-// 	for x := range f.cells {
-// 		for y := range f.cells[x] {
-// 			fx, fy := float64(x)-f.cells[x][y].vx, float64(y)-f.cells[x][y].vy
-// 			ix, iy := int(fx), int(fy)
-// 			jx, jy := fx-float64(ix), fy-float64(iy)
-// 			z1 := lerp(d(ix, iy), d(ix+1, iy), jx)
-// 			z2 := lerp(d(ix, iy+1), d(ix+1, iy+1), jx)
-// 			dn[x][y] = lerp(z1, z2, jy)
-// 		}
-// 	}
-// 	for x := range dn {
-// 		for y := range dn[x] {
-// 			f.cells[x][y].d = dn[x][y]
-// 		}
-// 	}
-// }
+func (f *Fluid) advect() [][]float64 {
+	lerp := func(a, b, k float64) float64 {
+		return a + k*(b-a)
+	}
+	d := func(x, y int) float64 {
+		return f.D(x, y)
+	}
+	dn := make([][]float64, len(f.d))
+	for i := range dn {
+		dn[i] = make([]float64, len(f.d[0]))
+	}
+	for x := range f.d {
+		for y := range f.d[x] {
+			fx, fy := float64(x)-f.vx[x][y], float64(y)-f.vy[x][y]
+			ix, iy := int(fx), int(fy)
+			jx, jy := fx-float64(ix), fy-float64(iy)
+			z1 := lerp(d(ix, iy), d(ix+1, iy), jx)
+			z2 := lerp(d(ix, iy+1), d(ix+1, iy+1), jx)
+			dn[x][y] = lerp(z1, z2, jy)
+		}
+	}
+	return dn
+}
 
 func (f *Fluid) Update() {
-
+	f.d = diffuse(f.d, f.k, f.iters)
+	f.vx = diffuse(f.vx, f.k, f.iters)
+	f.vy = diffuse(f.vy, f.k, f.iters)
+	f.d = f.advect()
 }

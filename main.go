@@ -42,7 +42,7 @@ func pollEvents(s tcell.Screen, f *fluid.Fluid) {
 				for i := range int(dist) {
 					xx := int(float64(prevMouseX) + dx*float64(i))
 					yy := int(float64(prevMouseY) + dy*float64(i))
-					f.Set(xx, yy*2, 10.0, dx*5.0, dy*5.0)
+					f.Set(xx, yy*2, 7.0, dx*2.0, dy*2.0)
 				}
 			}
 			prevMouseX, prevMouseY = x, y
