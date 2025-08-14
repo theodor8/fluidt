@@ -3,6 +3,7 @@ package main
 import (
 	"log"
 	"math"
+	"math/rand/v2"
 	"sync"
 	"time"
 
@@ -46,18 +47,21 @@ func pollEvents(s tcell.Screen, f *fluid.Fluid) {
 				prevMouseX, prevMouseY = x, y
 				continue
 			}
-			dx, dy := float64(x-prevMouseX), float64(y-prevMouseY)
-			dist := math.Hypot(dx, dy)
-			if dist < 1 {
-				continue
-			}
-			dx, dy = dx/dist, dy/dist
-			for i := range int(dist) {
-				xx := int(float64(prevMouseX) + dx*float64(i))
-				yy := int(float64(prevMouseY) + dy*float64(i))
-				mut.Lock()
-				f.Set(xx, yy*2, 11.0, dx*8.0, dy*8.0)
-				mut.Unlock()
+			switch ev.Buttons() {
+			case tcell.Button1, tcell.Button2:
+				dx, dy := float64(x-prevMouseX), float64(y-prevMouseY)
+				dist := math.Hypot(dx, dy)
+				if dist < 1 {
+					continue
+				}
+				dx, dy = dx/dist, dy/dist
+				for i := range int(dist) {
+					xx := int(float64(prevMouseX) + dx*float64(i))
+					yy := int(float64(prevMouseY) + dy*float64(i))
+					mut.Lock()
+					f.Set(xx, yy*2, 11.0, dx*8.0, dy*8.0)
+					mut.Unlock()
+				}
 			}
 			prevMouseX, prevMouseY = x, y
 		}
@@ -93,6 +97,32 @@ func eventLoop(s tcell.Screen, f *fluid.Fluid) {
 	}
 }
 
+func autoRun(s tcell.Screen, f *fluid.Fluid) {
+	for {
+		if !paused {
+			w, h := s.Size()
+			p1x, p1y := rand.Float64() * float64(w), rand.Float64() * float64(h) * 2
+			p2x, p2y := rand.Float64() * float64(w), rand.Float64() * float64(h) * 2
+			dx, dy := p2x - p1x, p2y - p1y
+			dist := math.Hypot(dx, dy)
+			if dist < 1 {
+				continue
+			}
+			dx, dy = dx/dist, dy/dist
+			delay := time.Duration(rand.IntN(10) + 10)
+			for i := range int(dist) {
+				xx := int(p1x + dx*float64(i))
+				yy := int(p1y + dy*float64(i))
+				mut.Lock()
+				f.Set(xx, yy, 11.0, dx*8.0, dy*8.0)
+				mut.Unlock()
+				time.Sleep(time.Millisecond * delay)
+			}
+		}
+		time.Sleep(time.Millisecond * time.Duration(rand.IntN(5000)) + 1000)
+	}
+}
+
 var prevMouseX, prevMouseY int
 var paused bool = false
 var mut sync.RWMutex
@@ -100,7 +130,6 @@ var quit chan struct{}
 
 func main() {
 
-	// TODO: auto-run (screensaver)
 	// TODO: optimize performance and memory usage
 	// TODO: flags
 
@@ -122,7 +151,7 @@ func main() {
 
 	quit = make(chan struct{})
 	go pollEvents(s, f)
-
+	go autoRun(s, f)
 	go eventLoop(s, f)
 
 	<-quit
