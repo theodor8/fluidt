@@ -27,6 +27,8 @@ func pollEvents(s tcell.Screen, f *fluid.Fluid) {
 					return
 				case ' ':
 					paused = !paused
+				case 'r':
+					f.Reset()
 				}
 			}
 		case *tcell.EventMouse:
@@ -81,6 +83,9 @@ var paused bool = false
 var quit chan struct{}
 
 func main() {
+
+	// TODO: auto-run (screensaver)
+	// TODO: screen edge buggy
 
 	s, err := tcell.NewScreen()
 	if err != nil {

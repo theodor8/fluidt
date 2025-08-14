@@ -19,7 +19,6 @@ func NewFluid(w, h int, k float64, iters int) *Fluid {
 	vx := newSlice2D(w, h)
 	vy := newSlice2D(w, h)
 	// TODO: change fluid size after creation
-	// TODO: reset fluid
 	return &Fluid{d: d, vx: vx, vy: vy, k: k, iters: iters}
 }
 
@@ -110,9 +109,20 @@ func (f *Fluid) clearDivergence() {
 }
 
 func (f *Fluid) Update() {
+	// TODO: fluid fade out
 	f.d = diffuse(f.d, f.k, f.iters)
 	f.vx = diffuse(f.vx, f.k, f.iters)
 	f.vy = diffuse(f.vy, f.k, f.iters)
 	f.d = f.advect()
 	f.clearDivergence()
+}
+
+func (f *Fluid) Reset() {
+	for x := range f.d {
+		for y := range f.d[x] {
+			f.d[x][y] = 0
+			f.vx[x][y] = 0
+			f.vy[x][y] = 0
+		}
+	}
 }
