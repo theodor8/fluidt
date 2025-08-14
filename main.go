@@ -33,7 +33,7 @@ func pollEvents(s tcell.Screen, f *fluid.Fluid) {
 			}
 		case *tcell.EventMouse:
 			x, y := ev.Position()
-			if prevMouseX == 0 && prevMouseY == 0 {
+			if paused || (prevMouseX == 0 && prevMouseY == 0) {
 				prevMouseX, prevMouseY = x, y
 				continue
 			}
@@ -86,6 +86,7 @@ func main() {
 
 	// TODO: auto-run (screensaver)
 	// TODO: screen edge buggy
+	// TODO: optimize performance and memory usage
 
 	s, err := tcell.NewScreen()
 	if err != nil {
