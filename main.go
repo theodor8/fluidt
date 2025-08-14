@@ -3,9 +3,11 @@ package main
 import (
 	"log"
 	"math"
+	"sync"
 	"time"
 
 	"fluidt/fluid"
+
 	"github.com/gdamore/tcell/v2"
 )
 
@@ -14,6 +16,10 @@ func pollEvents(s tcell.Screen, f *fluid.Fluid) {
 		ev := s.PollEvent()
 		switch ev := ev.(type) {
 		case *tcell.EventResize:
+			w, h := ev.Size()
+			mut.Lock()
+			f.Resize(w, h*2)
+			mut.Unlock()
 			s.Sync()
 		case *tcell.EventKey:
 			switch ev.Key() {
@@ -28,7 +34,10 @@ func pollEvents(s tcell.Screen, f *fluid.Fluid) {
 				case ' ':
 					paused = !paused
 				case 'r':
+					mut.Lock()
 					f.Reset()
+					mut.Unlock()
+					drawScreen(s, f)
 				}
 			}
 		case *tcell.EventMouse:
@@ -46,7 +55,9 @@ func pollEvents(s tcell.Screen, f *fluid.Fluid) {
 			for i := range int(dist) {
 				xx := int(float64(prevMouseX) + dx*float64(i))
 				yy := int(float64(prevMouseY) + dy*float64(i))
+				mut.Lock()
 				f.Set(xx, yy*2, 11.0, dx*8.0, dy*8.0)
+				mut.Unlock()
 			}
 			prevMouseX, prevMouseY = x, y
 		}
@@ -58,7 +69,9 @@ func drawScreen(s tcell.Screen, f *fluid.Fluid) {
 	for x := range w {
 		for y := range h {
 			y1, y2 := y*2, y*2+1
+			mut.RLock()
 			b1, b2 := int32(math.Min(f.D(x, y1), 1)*255), int32(math.Min(f.D(x, y2), 1)*255)
+			mut.RUnlock()
 			st := tcell.StyleDefault
 			st = st.Background(tcell.NewRGBColor(b1, 255-b1, 255-b1))
 			st = st.Foreground(tcell.NewRGBColor(b2, 255-b2, 255-b2))
@@ -71,7 +84,9 @@ func drawScreen(s tcell.Screen, f *fluid.Fluid) {
 func eventLoop(s tcell.Screen, f *fluid.Fluid) {
 	for {
 		if !paused {
+			mut.Lock()
 			f.Update()
+			mut.Unlock()
 			drawScreen(s, f)
 		}
 		time.Sleep(time.Millisecond * 33)
@@ -80,6 +95,7 @@ func eventLoop(s tcell.Screen, f *fluid.Fluid) {
 
 var prevMouseX, prevMouseY int
 var paused bool = false
+var mut sync.RWMutex
 var quit chan struct{}
 
 func main() {
@@ -87,6 +103,7 @@ func main() {
 	// TODO: auto-run (screensaver)
 	// TODO: screen edge buggy
 	// TODO: optimize performance and memory usage
+	// TODO: flags
 
 	s, err := tcell.NewScreen()
 	if err != nil {

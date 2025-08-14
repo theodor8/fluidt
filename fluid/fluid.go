@@ -18,7 +18,6 @@ func NewFluid(w, h int, k float64, iters int) *Fluid {
 	d := newSlice2D(w, h)
 	vx := newSlice2D(w, h)
 	vy := newSlice2D(w, h)
-	// TODO: change fluid size after creation
 	return &Fluid{d: d, vx: vx, vy: vy, k: k, iters: iters}
 }
 
@@ -125,4 +124,20 @@ func (f *Fluid) Reset() {
 			f.vy[x][y] = 0
 		}
 	}
+}
+
+func resizeSlice2D(s [][]float64, w, h int) [][]float64 {
+	n := newSlice2D(w, h)
+	for x := 0; x < len(s) && x < w; x++ {
+		for y := 0; y < len(s[0]) && y < h; y++ {
+			n[x][y] = s[x][y]
+		}
+	}
+	return n
+}
+
+func (f *Fluid) Resize(w, h int) {
+	f.d = resizeSlice2D(f.d, w, h)
+	f.vx = resizeSlice2D(f.vx, w, h)
+	f.vy = resizeSlice2D(f.vy, w, h)
 }
