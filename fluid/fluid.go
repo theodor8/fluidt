@@ -1,5 +1,7 @@
 package fluid
 
+import "math"
+
 type Fluid struct {
 	d, vx, vy [][]float64
 	k         float64
@@ -21,11 +23,15 @@ func NewFluid(w, h int, k float64, iters int) *Fluid {
 	return &Fluid{d: d, vx: vx, vy: vy, k: k, iters: iters}
 }
 
-func (f *Fluid) D(x, y int) float64 {
-	if x < 0 || y < 0 || x >= len(f.d) || y >= len(f.d[0]) {
+func val(a [][]float64, x, y int) float64 {
+	if x < 0 || y < 0 || x >= len(a) || y >= len(a[0]) {
 		return 0
 	}
-	return f.d[x][y]
+	return a[x][y]
+}
+
+func (f *Fluid) D(x, y int) float64 {
+	return val(f.d, x, y)
 }
 
 func (f *Fluid) Set(x, y int, d, vx, vy float64) {
@@ -42,20 +48,7 @@ func diffuse(x [][]float64, k float64, iters int) [][]float64 {
 	for range iters {
 		for c := range xn {
 			for r := range xn[c] {
-				sn := 0.0
-				if c > 0 {
-					sn += xn[c-1][r]
-				}
-				if c < len(xn)-1 {
-					sn += xn[c+1][r]
-				}
-				if r > 0 {
-					sn += xn[c][r-1]
-				}
-				if r < len(xn[c])-1 {
-					sn += xn[c][r+1]
-				}
-				sn /= 4.0
+				sn := (val(xn, c-1, r) + val(xn, c+1, r) + val(xn, c, r-1) + val(xn, c, r+1)) / 4.0
 				xn[c][r] = (x[c][r] + k*sn) / (1 + k)
 			}
 		}
@@ -78,7 +71,7 @@ func (f *Fluid) advect() [][]float64 {
 			jx, jy := fx-float64(ix), fy-float64(iy)
 			z1 := lerp(d(ix, iy), d(ix+1, iy), jx)
 			z2 := lerp(d(ix, iy+1), d(ix+1, iy+1), jx)
-			dn[x][y] = lerp(z1, z2, jy)
+			dn[x][y] = math.Max(lerp(z1, z2, jy), 0)
 		}
 	}
 	return dn
@@ -86,23 +79,23 @@ func (f *Fluid) advect() [][]float64 {
 
 func (f *Fluid) clearDivergence() {
 	dv := newSlice2D(len(f.d), len(f.d[0]))
-	for x := 1; x < len(f.d)-1; x++ {
-		for y := 1; y < len(f.d[0])-1; y++ {
-			dv[x][y] = (f.vx[x+1][y] - f.vx[x-1][y] + f.vy[x][y+1] - f.vy[x][y-1]) / 2.0
+	for x := range f.d {
+		for y := range f.d[x] {
+			dv[x][y] = (val(f.vx, x+1, y) - val(f.vx, x-1, y) + val(f.vy, x, y+1) - val(f.vy, x, y-1)) / 2.0
 		}
 	}
 	p := newSlice2D(len(f.d), len(f.d[0]))
 	for range f.iters {
-		for x := 1; x < len(f.d)-1; x++ {
-			for y := 1; y < len(f.d[0])-1; y++ {
-				p[x][y] = (p[x-1][y] + p[x+1][y] + p[x][y-1] + p[x][y+1] - dv[x][y]) / 4.0
+		for x := range f.d {
+			for y := range f.d[x] {
+				p[x][y] = (val(p, x-1, y) + val(p, x+1, y) + val(p, x, y-1) + val(p, x, y+1) - dv[x][y]) / 4.0
 			}
 		}
 	}
-	for x := 1; x < len(f.d)-1; x++ {
-		for y := 1; y < len(f.d[0])-1; y++ {
-			f.vx[x][y] -= (p[x+1][y] - p[x-1][y]) / 2.0
-			f.vy[x][y] -= (p[x][y+1] - p[x][y-1]) / 2.0
+	for x := range f.d {
+		for y := range f.d[x] {
+			f.vx[x][y] -= (val(p, x+1, y) - val(p, x-1, y)) / 2.0
+			f.vy[x][y] -= (val(p, x, y+1) - val(p, x, y-1)) / 2.0
 		}
 	}
 }

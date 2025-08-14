@@ -101,7 +101,6 @@ var quit chan struct{}
 func main() {
 
 	// TODO: auto-run (screensaver)
-	// TODO: screen edge buggy
 	// TODO: optimize performance and memory usage
 	// TODO: flags
 
