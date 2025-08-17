@@ -101,12 +101,18 @@ func (f *Fluid) clearDivergence() {
 }
 
 func (f *Fluid) Update() {
-	// TODO: fluid fade out
+	// TODO: walls
 	f.d = diffuse(f.d, f.k, f.iters)
 	f.vx = diffuse(f.vx, f.k, f.iters)
 	f.vy = diffuse(f.vy, f.k, f.iters)
 	f.d = f.advect()
 	f.clearDivergence()
+
+	for x := range f.d {
+		for y := range f.d[x] {
+			f.d[x][y] *= 0.98
+		}
+	}
 }
 
 func (f *Fluid) Reset() {

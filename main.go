@@ -147,7 +147,7 @@ func main() {
 	s.Clear()
 
 	w, h := s.Size()
-	f := fluid.NewFluid(w, h*2, 0.15, 10)
+	f := fluid.NewFluid(w, h*2, 0.11, 10)
 
 	quit = make(chan struct{})
 	go pollEvents(s, f)
