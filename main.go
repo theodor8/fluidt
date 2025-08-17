@@ -101,9 +101,9 @@ func autoRun(s tcell.Screen, f *fluid.Fluid) {
 	for {
 		if !paused {
 			w, h := s.Size()
-			p1x, p1y := rand.Float64() * float64(w), rand.Float64() * float64(h) * 2
-			p2x, p2y := rand.Float64() * float64(w), rand.Float64() * float64(h) * 2
-			dx, dy := p2x - p1x, p2y - p1y
+			p1x, p1y := rand.Float64()*float64(w), rand.Float64()*float64(h)*2
+			p2x, p2y := rand.Float64()*float64(w), rand.Float64()*float64(h)*2
+			dx, dy := p2x-p1x, p2y-p1y
 			dist := math.Hypot(dx, dy)
 			if dist < 1 {
 				continue
@@ -119,7 +119,7 @@ func autoRun(s tcell.Screen, f *fluid.Fluid) {
 				time.Sleep(time.Millisecond * delay)
 			}
 		}
-		time.Sleep(time.Millisecond * time.Duration(rand.IntN(5000)) + 1000)
+		time.Sleep(time.Millisecond*time.Duration(rand.IntN(5000)) + 1000)
 	}
 }
 
@@ -130,7 +130,6 @@ var quit chan struct{}
 
 func main() {
 
-	// TODO: optimize performance and memory usage
 	// TODO: flags
 
 	s, err := tcell.NewScreen()
@@ -147,7 +146,7 @@ func main() {
 	s.Clear()
 
 	w, h := s.Size()
-	f := fluid.NewFluid(w, h*2, 0.11, 10)
+	f := fluid.NewFluid(w, h*2, 0.11, 0.02, 5)
 
 	quit = make(chan struct{})
 	go pollEvents(s, f)

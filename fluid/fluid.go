@@ -1,10 +1,13 @@
 package fluid
 
-import "math"
+import (
+	"math"
+	"sync"
+)
 
 type Fluid struct {
 	d, vx, vy [][]float64
-	k         float64
+	k, decay  float64
 	iters     int
 }
 
@@ -16,11 +19,11 @@ func newSlice2D(w, h int) [][]float64 {
 	return s
 }
 
-func NewFluid(w, h int, k float64, iters int) *Fluid {
+func NewFluid(w, h int, k, decay float64, iters int) *Fluid {
 	d := newSlice2D(w, h)
 	vx := newSlice2D(w, h)
 	vy := newSlice2D(w, h)
-	return &Fluid{d: d, vx: vx, vy: vy, k: k, iters: iters}
+	return &Fluid{d: d, vx: vx, vy: vy, k: k, decay: decay, iters: iters}
 }
 
 func val(a [][]float64, x, y int) float64 {
@@ -102,15 +105,29 @@ func (f *Fluid) clearDivergence() {
 
 func (f *Fluid) Update() {
 	// TODO: walls
-	f.d = diffuse(f.d, f.k, f.iters)
-	f.vx = diffuse(f.vx, f.k, f.iters)
-	f.vy = diffuse(f.vy, f.k, f.iters)
+
+	var wg sync.WaitGroup
+	wg.Add(3)
+
+	go func() {
+		defer wg.Done()
+		f.d = diffuse(f.d, f.k, f.iters)
+	}()
+	go func() {
+		defer wg.Done()
+		f.vx = diffuse(f.vx, f.k, f.iters)
+	}()
+	go func() {
+		defer wg.Done()
+		f.vy = diffuse(f.vy, f.k, f.iters)
+	}()
+	wg.Wait()
 	f.d = f.advect()
 	f.clearDivergence()
 
 	for x := range f.d {
 		for y := range f.d[x] {
-			f.d[x][y] *= 0.98
+			f.d[x][y] *= 1 - f.decay
 		}
 	}
 }
