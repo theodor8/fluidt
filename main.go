@@ -35,11 +35,6 @@ func pollEvents(s tcell.Screen, f *fluid.Fluid) {
 					return
 				case ' ':
 					cfg.paused = !cfg.paused
-				case 'r':
-					mut.Lock()
-					f.Reset()
-					mut.Unlock()
-					drawScreen(s, f)
 				}
 			}
 		case *tcell.EventMouse:
@@ -50,19 +45,7 @@ func pollEvents(s tcell.Screen, f *fluid.Fluid) {
 			}
 			switch ev.Buttons() {
 			case tcell.Button1, tcell.Button2:
-				dx, dy := float64(x-prevMouseX), float64(y-prevMouseY)
-				dist := math.Hypot(dx, dy)
-				if dist < 1 {
-					continue
-				}
-				dx, dy = dx/dist, dy/dist
-				for i := range int(dist) {
-					xx := int(float64(prevMouseX) + dx*float64(i))
-					yy := int(float64(prevMouseY) + dy*float64(i))
-					mut.Lock()
-					f.Set(xx, yy*2, 15.0, dx*8.0, dy*8.0)
-					mut.Unlock()
-				}
+				setLine(f, prevMouseX, prevMouseY*2, x, y*2, 8, 0)
 			}
 			prevMouseX, prevMouseY = x, y
 		}
@@ -109,28 +92,30 @@ func eventLoop(s tcell.Screen, f *fluid.Fluid) {
 	}
 }
 
+func setLine(f *fluid.Fluid, x1, y1, x2, y2 int, v float64, delay time.Duration) {
+	dx, dy := float64(x2-x1), float64(y2-y1)
+	dist := math.Hypot(dx, dy)
+	if dist < 1 {
+		return
+	}
+	dirx, diry := dx/dist, dy/dist
+	for i := range int(dist) {
+		xx := int(float64(x1) + dirx*float64(i))
+		yy := int(float64(y1) + diry*float64(i))
+		mut.Lock()
+		f.Set(xx, yy, 12.0, dirx*v, diry*v)
+		mut.Unlock()
+		time.Sleep(delay)
+	}
+}
+
 func autoRun(s tcell.Screen, f *fluid.Fluid) {
 	for {
 		if !cfg.paused {
 			w, h := s.Size()
 			p1x, p1y := rand.Float64()*float64(w), rand.Float64()*float64(h)*2
 			p2x, p2y := rand.Float64()*float64(w), rand.Float64()*float64(h)*2
-			dx, dy := p2x-p1x, p2y-p1y
-			dist := math.Hypot(dx, dy)
-			if dist < 1 {
-				continue
-			}
-			dx, dy = dx/dist, dy/dist
-			delay := time.Duration(rand.IntN(2000) + 2000)
-			for i := range int(dist) {
-				xx := int(p1x + dx*float64(i))
-				yy := int(p1y + dy*float64(i))
-				mut.Lock()
-				f.Set(xx, yy, 15.0, dx*8.0, dy*8.0)
-				mut.Unlock()
-				time.Sleep(time.Microsecond * delay)
-				delay += 100
-			}
+			setLine(f, int(p1x), int(p1y), int(p2x), int(p2y), 8, time.Millisecond*5)
 		}
 		time.Sleep(time.Millisecond*time.Duration(rand.IntN(3000)) + 1000)
 	}
@@ -149,12 +134,12 @@ var quit chan struct{}
 
 func main() {
 
-	viscosity := flag.Float64("v", 0.1, "viscosity")
-	decay := flag.Float64("d", 0.01, "decay")
-	iters := flag.Int("i", 5, "iterations")
+	viscosity := flag.Float64("v", 0.2, "viscosity")
+	decay := flag.Float64("d", 0.02, "decay")
+	iters := flag.Int("i", 7, "iterations")
 	flag.BoolVar(&cfg.autoRunDisabled, "a", false, "disable auto run")
-	flag.StringVar(&cfg.fg, "fg", "#ff0000", "foreground color")
-	flag.StringVar(&cfg.bg, "bg", "#00eeff", "background color")
+	flag.StringVar(&cfg.fg, "fg", "#00aaff", "foreground color")
+	flag.StringVar(&cfg.bg, "bg", "#000000", "background color")
 	flag.Parse()
 
 	s, err := tcell.NewScreen()
