@@ -20,7 +20,6 @@ func newSlice2D(w, h int) [][]float64 {
 }
 
 func NewFluid(w, h int, viscosity, decay float64, iters int) *Fluid {
-	// TODO: use buffers instead of creating new slices each update
 	d := newSlice2D(w, h)
 	vx := newSlice2D(w, h)
 	vy := newSlice2D(w, h)
@@ -113,11 +112,8 @@ func decay(x [][]float64, decay float64) {
 }
 
 func (f *Fluid) Update() {
-	// TODO: walls
-
 	var wg sync.WaitGroup
 	wg.Add(3)
-
 	go func() {
 		defer wg.Done()
 		f.d = diffuse(f.d, f.viscosity, f.iters)
@@ -131,6 +127,7 @@ func (f *Fluid) Update() {
 		f.vy = diffuse(f.vy, f.viscosity, f.iters)
 	}()
 	wg.Wait()
+
 	f.d = f.advect()
 	f.clearDivergence()
 

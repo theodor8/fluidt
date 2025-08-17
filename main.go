@@ -34,7 +34,7 @@ func pollEvents(s tcell.Screen, f *fluid.Fluid) {
 					close(quit)
 					return
 				case ' ':
-					paused = !paused
+					cfg.paused = !cfg.paused
 				case 'r':
 					mut.Lock()
 					f.Reset()
@@ -44,7 +44,7 @@ func pollEvents(s tcell.Screen, f *fluid.Fluid) {
 			}
 		case *tcell.EventMouse:
 			x, y := ev.Position()
-			if paused || (prevMouseX == 0 && prevMouseY == 0) {
+			if cfg.paused || (prevMouseX == 0 && prevMouseY == 0) {
 				prevMouseX, prevMouseY = x, y
 				continue
 			}
@@ -69,17 +69,28 @@ func pollEvents(s tcell.Screen, f *fluid.Fluid) {
 	}
 }
 
+func lerpColor(c1, c2 tcell.Color, ratio float64) tcell.Color {
+	r1, g1, b1 := c1.RGB()
+	r2, g2, b2 := c2.RGB()
+	r := int32(float64(r1) + (float64(r2-r1) * ratio))
+	g := int32(float64(g1) + (float64(g2-g1) * ratio))
+	b := int32(float64(b1) + (float64(b2-b1) * ratio))
+	return tcell.NewRGBColor(r, g, b)
+}
+
 func drawScreen(s tcell.Screen, f *fluid.Fluid) {
+	fg := tcell.GetColor(cfg.fg)
+	bg := tcell.GetColor(cfg.bg)
 	w, h := s.Size()
 	for x := range w {
 		for y := range h {
 			y1, y2 := y*2, y*2+1
 			mut.RLock()
-			b1, b2 := int32(math.Min(f.D(x, y1), 1)*255), int32(math.Min(f.D(x, y2), 1)*255)
+			b1, b2 := math.Min(f.D(x, y1), 1), math.Min(f.D(x, y2), 1)
 			mut.RUnlock()
 			st := tcell.StyleDefault
-			st = st.Background(tcell.NewRGBColor(b1, 255-b1, 255-b1))
-			st = st.Foreground(tcell.NewRGBColor(b2, 255-b2, 255-b2))
+			st = st.Background(lerpColor(bg, fg, b1))
+			st = st.Foreground(lerpColor(bg, fg, b2))
 			s.SetContent(x, y, '▄', nil, st)
 		}
 	}
@@ -88,7 +99,7 @@ func drawScreen(s tcell.Screen, f *fluid.Fluid) {
 
 func eventLoop(s tcell.Screen, f *fluid.Fluid) {
 	for {
-		if !paused {
+		if !cfg.paused {
 			mut.Lock()
 			f.Update()
 			mut.Unlock()
@@ -100,7 +111,7 @@ func eventLoop(s tcell.Screen, f *fluid.Fluid) {
 
 func autoRun(s tcell.Screen, f *fluid.Fluid) {
 	for {
-		if !paused {
+		if !cfg.paused {
 			w, h := s.Size()
 			p1x, p1y := rand.Float64()*float64(w), rand.Float64()*float64(h)*2
 			p2x, p2y := rand.Float64()*float64(w), rand.Float64()*float64(h)*2
@@ -125,8 +136,14 @@ func autoRun(s tcell.Screen, f *fluid.Fluid) {
 	}
 }
 
+type config struct {
+	autoRunDisabled bool
+	fg, bg          string
+	paused          bool
+}
+
+var cfg config = config{}
 var prevMouseX, prevMouseY int
-var paused bool = false
 var mut sync.RWMutex
 var quit chan struct{}
 
@@ -135,7 +152,9 @@ func main() {
 	viscosity := flag.Float64("v", 0.1, "viscosity")
 	decay := flag.Float64("d", 0.01, "decay")
 	iters := flag.Int("i", 5, "iterations")
-	autoRunDisabled := flag.Bool("a", false, "disable auto run")
+	flag.BoolVar(&cfg.autoRunDisabled, "a", false, "disable auto run")
+	flag.StringVar(&cfg.fg, "fg", "#ff0000", "foreground color")
+	flag.StringVar(&cfg.bg, "bg", "#00eeff", "background color")
 	flag.Parse()
 
 	s, err := tcell.NewScreen()
@@ -156,7 +175,7 @@ func main() {
 
 	quit = make(chan struct{})
 	go pollEvents(s, f)
-	if !*autoRunDisabled {
+	if !cfg.autoRunDisabled {
 		go autoRun(s, f)
 	}
 	go eventLoop(s, f)
