@@ -60,7 +60,7 @@ func pollEvents(s tcell.Screen, f *fluid.Fluid) {
 					xx := int(float64(prevMouseX) + dx*float64(i))
 					yy := int(float64(prevMouseY) + dy*float64(i))
 					mut.Lock()
-					f.Set(xx, yy*2, 11.0, dx*8.0, dy*8.0)
+					f.Set(xx, yy*2, 15.0, dx*8.0, dy*8.0)
 					mut.Unlock()
 				}
 			}
@@ -110,17 +110,18 @@ func autoRun(s tcell.Screen, f *fluid.Fluid) {
 				continue
 			}
 			dx, dy = dx/dist, dy/dist
-			delay := time.Duration(rand.IntN(10) + 10)
+			delay := time.Duration(rand.IntN(2000) + 2000)
 			for i := range int(dist) {
 				xx := int(p1x + dx*float64(i))
 				yy := int(p1y + dy*float64(i))
 				mut.Lock()
-				f.Set(xx, yy, 11.0, dx*8.0, dy*8.0)
+				f.Set(xx, yy, 15.0, dx*8.0, dy*8.0)
 				mut.Unlock()
-				time.Sleep(time.Millisecond * delay)
+				time.Sleep(time.Microsecond * delay)
+				delay += 100
 			}
 		}
-		time.Sleep(time.Millisecond*time.Duration(rand.IntN(5000)) + 1000)
+		time.Sleep(time.Millisecond*time.Duration(rand.IntN(3000)) + 1000)
 	}
 }
 
@@ -130,12 +131,12 @@ var mut sync.RWMutex
 var quit chan struct{}
 
 func main() {
-	
+
 	viscosity := flag.Float64("v", 0.1, "viscosity")
 	decay := flag.Float64("d", 0.01, "decay")
 	iters := flag.Int("i", 5, "iterations")
+	autoRunDisabled := flag.Bool("a", false, "disable auto run")
 	flag.Parse()
-
 
 	s, err := tcell.NewScreen()
 	if err != nil {
@@ -153,10 +154,11 @@ func main() {
 	w, h := s.Size()
 	f := fluid.NewFluid(w, h*2, *viscosity, *decay, *iters)
 
-
 	quit = make(chan struct{})
 	go pollEvents(s, f)
-	go autoRun(s, f)
+	if !*autoRunDisabled {
+		go autoRun(s, f)
+	}
 	go eventLoop(s, f)
 
 	<-quit

@@ -6,9 +6,9 @@ import (
 )
 
 type Fluid struct {
-	d, vx, vy [][]float64
-	viscosity, decay  float64
-	iters     int
+	d, vx, vy        [][]float64
+	viscosity, decay float64
+	iters            int
 }
 
 func newSlice2D(w, h int) [][]float64 {
@@ -104,6 +104,14 @@ func (f *Fluid) clearDivergence() {
 	}
 }
 
+func decay(x [][]float64, decay float64) {
+	for i := range x {
+		for j := range x[i] {
+			x[i][j] *= 1 - decay
+		}
+	}
+}
+
 func (f *Fluid) Update() {
 	// TODO: walls
 
@@ -126,12 +134,7 @@ func (f *Fluid) Update() {
 	f.d = f.advect()
 	f.clearDivergence()
 
-	for x := range f.d {
-		for y := range f.d[x] {
-			f.d[x][y] *= 1 - f.decay
-			f.d[x][y] = math.Max(f.d[x][y], 0)
-		}
-	}
+	decay(f.d, f.decay)
 }
 
 func (f *Fluid) Reset() {
