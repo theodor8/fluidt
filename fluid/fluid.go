@@ -7,7 +7,7 @@ import (
 
 type Fluid struct {
 	d, vx, vy [][]float64
-	k, decay  float64
+	viscosity, decay  float64
 	iters     int
 }
 
@@ -19,11 +19,12 @@ func newSlice2D(w, h int) [][]float64 {
 	return s
 }
 
-func NewFluid(w, h int, k, decay float64, iters int) *Fluid {
+func NewFluid(w, h int, viscosity, decay float64, iters int) *Fluid {
+	// TODO: use buffers instead of creating new slices each update
 	d := newSlice2D(w, h)
 	vx := newSlice2D(w, h)
 	vy := newSlice2D(w, h)
-	return &Fluid{d: d, vx: vx, vy: vy, k: k, decay: decay, iters: iters}
+	return &Fluid{d: d, vx: vx, vy: vy, viscosity: viscosity, decay: decay, iters: iters}
 }
 
 func val(a [][]float64, x, y int) float64 {
@@ -46,13 +47,13 @@ func (f *Fluid) Set(x, y int, d, vx, vy float64) {
 	f.vy[x][y] = vy
 }
 
-func diffuse(x [][]float64, k float64, iters int) [][]float64 {
+func diffuse(x [][]float64, viscosity float64, iters int) [][]float64 {
 	xn := newSlice2D(len(x), len(x[0]))
 	for range iters {
 		for c := range xn {
 			for r := range xn[c] {
 				sn := (val(xn, c-1, r) + val(xn, c+1, r) + val(xn, c, r-1) + val(xn, c, r+1)) / 4.0
-				xn[c][r] = (x[c][r] + k*sn) / (1 + k)
+				xn[c][r] = (x[c][r] + viscosity*sn) / (1 + viscosity)
 			}
 		}
 	}
@@ -111,15 +112,15 @@ func (f *Fluid) Update() {
 
 	go func() {
 		defer wg.Done()
-		f.d = diffuse(f.d, f.k, f.iters)
+		f.d = diffuse(f.d, f.viscosity, f.iters)
 	}()
 	go func() {
 		defer wg.Done()
-		f.vx = diffuse(f.vx, f.k, f.iters)
+		f.vx = diffuse(f.vx, f.viscosity, f.iters)
 	}()
 	go func() {
 		defer wg.Done()
-		f.vy = diffuse(f.vy, f.k, f.iters)
+		f.vy = diffuse(f.vy, f.viscosity, f.iters)
 	}()
 	wg.Wait()
 	f.d = f.advect()
@@ -128,6 +129,7 @@ func (f *Fluid) Update() {
 	for x := range f.d {
 		for y := range f.d[x] {
 			f.d[x][y] *= 1 - f.decay
+			f.d[x][y] = math.Max(f.d[x][y], 0)
 		}
 	}
 }

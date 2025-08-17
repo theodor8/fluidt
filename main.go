@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"log"
 	"math"
 	"math/rand/v2"
@@ -129,8 +130,12 @@ var mut sync.RWMutex
 var quit chan struct{}
 
 func main() {
+	
+	viscosity := flag.Float64("v", 0.1, "viscosity")
+	decay := flag.Float64("d", 0.01, "decay")
+	iters := flag.Int("i", 5, "iterations")
+	flag.Parse()
 
-	// TODO: flags
 
 	s, err := tcell.NewScreen()
 	if err != nil {
@@ -146,7 +151,8 @@ func main() {
 	s.Clear()
 
 	w, h := s.Size()
-	f := fluid.NewFluid(w, h*2, 0.11, 0.02, 5)
+	f := fluid.NewFluid(w, h*2, *viscosity, *decay, *iters)
+
 
 	quit = make(chan struct{})
 	go pollEvents(s, f)
