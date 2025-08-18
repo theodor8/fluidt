@@ -111,13 +111,35 @@ func setLine(f *fluid.Fluid, x1, y1, x2, y2 int, v float64, delay time.Duration)
 
 func autoRun(s tcell.Screen, f *fluid.Fluid) {
 	for {
-		if !cfg.paused {
-			w, h := s.Size()
-			p1x, p1y := rand.Float64()*float64(w), rand.Float64()*float64(h)*2
-			p2x, p2y := rand.Float64()*float64(w), rand.Float64()*float64(h)*2
-			setLine(f, int(p1x), int(p1y), int(p2x), int(p2y), 8, time.Millisecond*5)
+
+		if cfg.paused {
+			continue
 		}
-		time.Sleep(time.Millisecond*time.Duration(rand.IntN(3000)) + 1000)
+
+		w, h := s.Size()
+		px, py := rand.Float64()*float64(w), rand.Float64()*float64(h)*2
+		angle := rand.Float64() * 2 * math.Pi
+		vx, vy := math.Cos(angle), math.Sin(angle)
+		dist := rand.Float64()*50 + 50
+		for range int(dist) {
+			mut.Lock()
+			f.Set(int(px), int(py), 12.0, vx*8, vy*8)
+			mut.Unlock()
+			px += vx
+			py += vy
+			if px < 0 || px >= float64(w) {
+				vx = -vx
+				px = math.Max(0, math.Min(px, float64(w-1)))
+			}
+			if py < 0 || py >= float64(h*2) {
+				vy = -vy
+				py = math.Max(0, math.Min(py, float64(h*2-1)))
+			}
+
+			time.Sleep(time.Millisecond * 5)
+		}
+
+		time.Sleep(time.Millisecond*time.Duration(rand.IntN(3000) + 1500))
 	}
 }
 
