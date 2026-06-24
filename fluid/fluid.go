@@ -37,6 +37,22 @@ func (f *Fluid) D(x, y int) float64 {
 	return val(f.d, x, y)
 }
 
+func (f *Fluid) Speed(x, y int) float64 {
+	return math.Hypot(val(f.vx, x, y), val(f.vy, x, y))
+}
+
+func (f *Fluid) AvgSpeed(x, y, radius int) float64 {
+	var sum float64
+	var n int
+	for dx := -radius; dx <= radius; dx++ {
+		for dy := -radius; dy <= radius; dy++ {
+			sum += math.Hypot(val(f.vx, x+dx, y+dy), val(f.vy, x+dx, y+dy))
+			n++
+		}
+	}
+	return sum / float64(n)
+}
+
 func (f *Fluid) Set(x, y int, d, vx, vy float64) {
 	if x < 0 || y < 0 || x >= len(f.d) || y >= len(f.d[0]) {
 		return

@@ -61,28 +61,52 @@ func pollEvents(s tcell.Screen, f *fluid.Fluid) {
 	}
 }
 
-func lerpColor(c1, c2 tcell.Color, ratio float64) tcell.Color {
-	r1, g1, b1 := c1.RGB()
-	r2, g2, b2 := c2.RGB()
-	r := int32(float64(r1) + (float64(r2-r1) * ratio))
-	g := int32(float64(g1) + (float64(g2-g1) * ratio))
-	b := int32(float64(b1) + (float64(b2-b1) * ratio))
-	return tcell.NewRGBColor(r, g, b)
+// hsvToRGB converts HSV (h in [0,360), s and v in [0,1]) to a tcell color.
+func hsvToRGB(h, s, v float64) tcell.Color {
+	h = math.Mod(h, 360)
+	i := int(h / 60)
+	f := h/60 - float64(i)
+	p, q, t := v*(1-s), v*(1-s*f), v*(1-s*(1-f))
+	var r, g, b float64
+	switch i {
+	case 0:
+		r, g, b = v, t, p
+	case 1:
+		r, g, b = q, v, p
+	case 2:
+		r, g, b = p, v, t
+	case 3:
+		r, g, b = p, q, v
+	case 4:
+		r, g, b = t, p, v
+	default:
+		r, g, b = v, p, q
+	}
+	return tcell.NewRGBColor(int32(r*255), int32(g*255), int32(b*255))
+}
+
+func fluidColor(bg tcell.Color, density, speed float64) tcell.Color {
+	if density <= 0 {
+		return bg
+	}
+	// blue (slow) → cyan → green → yellow → red (fast)
+	hue := (1.0 - math.Min(speed/2.0, 1.0)) * 240
+	return hsvToRGB(hue, 1.0, math.Min(density, 1.0))
 }
 
 func drawScreen(s tcell.Screen, f *fluid.Fluid) {
-	fg := tcell.GetColor(cfg.fg)
 	bg := tcell.GetColor(cfg.bg)
 	w, h := s.Size()
 	for x := range w {
 		for y := range h {
 			y1, y2 := y*2, y*2+1
 			mut.RLock()
-			b1, b2 := math.Min(f.D(x, y1), 1), math.Min(f.D(x, y2), 1)
+			d1, d2 := f.D(x, y1), f.D(x, y2)
+			sp1, sp2 := f.AvgSpeed(x, y1, 4), f.AvgSpeed(x, y2, 4)
 			mut.RUnlock()
 			st := tcell.StyleDefault
-			st = st.Background(lerpColor(bg, fg, b1))
-			st = st.Foreground(lerpColor(bg, fg, b2))
+			st = st.Background(fluidColor(bg, d1, sp1))
+			st = st.Foreground(fluidColor(bg, d2, sp2))
 			s.SetContent(x, y, '▄', nil, st)
 		}
 	}
@@ -154,7 +178,7 @@ func autoRun(s tcell.Screen, f *fluid.Fluid) {
 
 type config struct {
 	autoRun bool
-	fg, bg  string
+	bg      string
 	paused  bool
 	speed   float64
 }
@@ -171,7 +195,6 @@ func main() {
 	iters := flag.Int("i", 7, "iterations")
 	flag.Float64Var(&cfg.speed, "s", 1.0, "speed multiplier")
 	flag.BoolVar(&cfg.autoRun, "a", false, "auto run")
-	flag.StringVar(&cfg.fg, "fg", "#00aaff", "foreground color")
 	flag.StringVar(&cfg.bg, "bg", "#000000", "background color")
 	flag.Parse()
 
