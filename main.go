@@ -40,6 +40,10 @@ func pollEvents(s tcell.Screen, f *fluid.Fluid) {
 					f.Reset()
 					mut.Unlock()
 					drawScreen(s, f)
+				case 's':
+					mut.Lock()
+					f.Swirl(float64(prevMouseX), float64(prevMouseY*2), 15, 1.5)
+					mut.Unlock()
 				}
 			}
 		case *tcell.EventMouse:
@@ -150,9 +154,9 @@ func autoRun(s tcell.Screen, f *fluid.Fluid) {
 
 type config struct {
 	autoRun bool
-	fg, bg          string
-	paused          bool
-	speed           float64
+	fg, bg  string
+	paused  bool
+	speed   float64
 }
 
 var cfg config = config{}

@@ -154,6 +154,27 @@ func resizeSlice2D(s [][]float64, w, h int) [][]float64 {
 	return n
 }
 
+func (f *Fluid) Swirl(cx, cy, radius, strength float64) {
+	w, h := len(f.d), len(f.d[0])
+	x0 := int(math.Max(cx-radius, 0))
+	x1 := int(math.Min(cx+radius, float64(w-1)))
+	y0 := int(math.Max(cy-radius, 0))
+	y1 := int(math.Min(cy+radius, float64(h-1)))
+	for x := x0; x <= x1; x++ {
+		for y := y0; y <= y1; y++ {
+			dx := float64(x) - cx
+			dy := float64(y) - cy
+			r := math.Hypot(dx, dy)
+			if r < 0.5 || r > radius || f.d[x][y] < 0.01 {
+				continue
+			}
+			falloff := 1.0 - r/radius
+			f.vx[x][y] += -dy / r * strength * falloff
+			f.vy[x][y] += dx / r * strength * falloff
+		}
+	}
+}
+
 func (f *Fluid) Resize(w, h int) {
 	f.d = resizeSlice2D(f.d, w, h)
 	f.vx = resizeSlice2D(f.vx, w, h)
