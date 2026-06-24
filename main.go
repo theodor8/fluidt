@@ -85,13 +85,27 @@ func hsvToRGB(h, s, v float64) tcell.Color {
 	return tcell.NewRGBColor(int32(r*255), int32(g*255), int32(b*255))
 }
 
+func colorRGB(c tcell.Color) (int32, int32, int32) {
+	h := c.Hex()
+	return (h >> 16) & 0xff, (h >> 8) & 0xff, h & 0xff
+}
+
+func lerpColor(a, b tcell.Color, t float64) tcell.Color {
+	ar, ag, ab := colorRGB(a)
+	br, bg2, bb := colorRGB(b)
+	r := int32(float64(ar)*(1-t) + float64(br)*t)
+	g := int32(float64(ag)*(1-t) + float64(bg2)*t)
+	bv := int32(float64(ab)*(1-t) + float64(bb)*t)
+	return tcell.NewRGBColor(r, g, bv)
+}
+
 func fluidColor(bg tcell.Color, density, speed float64) tcell.Color {
 	if density <= 0 {
 		return bg
 	}
-	// blue (slow) → cyan → green → yellow → red (fast)
-	hue := (1.0 - math.Min(speed/2.0, 1.0)) * 240
-	return hsvToRGB(hue, 1.0, math.Min(density, 1.0))
+	// cyan (slow) → pink (fast), blend from bg at low density
+	hue := 180 + math.Min(speed/2.0, 1.0)*140
+	return lerpColor(bg, hsvToRGB(hue, 1.0, 1.0), math.Min(density, 1.0))
 }
 
 func drawScreen(s tcell.Screen, f *fluid.Fluid) {
@@ -195,7 +209,7 @@ func main() {
 	iters := flag.Int("i", 7, "iterations")
 	flag.Float64Var(&cfg.speed, "s", 1.0, "speed multiplier")
 	flag.BoolVar(&cfg.autoRun, "a", false, "auto run")
-	flag.StringVar(&cfg.bg, "bg", "#000000", "background color")
+	flag.StringVar(&cfg.bg, "bg", "#ddd5c8", "background color")
 	flag.Parse()
 
 	s, err := tcell.NewScreen()
