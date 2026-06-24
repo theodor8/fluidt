@@ -88,7 +88,7 @@ func eventLoop(s tcell.Screen, f *fluid.Fluid) {
 			mut.Unlock()
 			drawScreen(s, f)
 		}
-		time.Sleep(time.Millisecond * 33)
+		time.Sleep(time.Duration(float64(time.Millisecond*33) / cfg.speed))
 	}
 }
 
@@ -147,6 +147,7 @@ type config struct {
 	autoRunDisabled bool
 	fg, bg          string
 	paused          bool
+	speed           float64
 }
 
 var cfg config = config{}
@@ -159,6 +160,7 @@ func main() {
 	viscosity := flag.Float64("v", 0.2, "viscosity")
 	decay := flag.Float64("d", 0.02, "decay")
 	iters := flag.Int("i", 7, "iterations")
+	flag.Float64Var(&cfg.speed, "s", 1.0, "speed multiplier")
 	flag.BoolVar(&cfg.autoRunDisabled, "a", false, "disable auto run")
 	flag.StringVar(&cfg.fg, "fg", "#00aaff", "foreground color")
 	flag.StringVar(&cfg.bg, "bg", "#000000", "background color")
