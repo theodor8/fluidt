@@ -35,6 +35,11 @@ func pollEvents(s tcell.Screen, f *fluid.Fluid) {
 					return
 				case ' ':
 					cfg.paused = !cfg.paused
+				case 'r':
+					mut.Lock()
+					f.Reset()
+					mut.Unlock()
+					drawScreen(s, f)
 				}
 			}
 		case *tcell.EventMouse:
