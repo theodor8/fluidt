@@ -144,7 +144,7 @@ func autoRun(s tcell.Screen, f *fluid.Fluid) {
 }
 
 type config struct {
-	autoRunDisabled bool
+	autoRun bool
 	fg, bg          string
 	paused          bool
 	speed           float64
@@ -161,7 +161,7 @@ func main() {
 	decay := flag.Float64("d", 0.02, "decay")
 	iters := flag.Int("i", 7, "iterations")
 	flag.Float64Var(&cfg.speed, "s", 1.0, "speed multiplier")
-	flag.BoolVar(&cfg.autoRunDisabled, "a", false, "disable auto run")
+	flag.BoolVar(&cfg.autoRun, "a", false, "auto run")
 	flag.StringVar(&cfg.fg, "fg", "#00aaff", "foreground color")
 	flag.StringVar(&cfg.bg, "bg", "#000000", "background color")
 	flag.Parse()
@@ -184,7 +184,7 @@ func main() {
 
 	quit = make(chan struct{})
 	go pollEvents(s, f)
-	if !cfg.autoRunDisabled {
+	if cfg.autoRun {
 		go autoRun(s, f)
 	}
 	go eventLoop(s, f)
